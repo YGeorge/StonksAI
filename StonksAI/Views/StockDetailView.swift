@@ -12,30 +12,7 @@ struct StockDetailView: View {
                     QuoteInfoView(quote: latestQuote)
                 }
                 
-                Chart(viewModel.historicalData) { quote in
-                    LineMark(
-                        x: .value("Date", quote.date),
-                        y: .value("Price", quote.close)
-                    )
-                    .foregroundStyle(AppTheme.textColor)
-                }
-                .frame(height: 300)
-                .chartXAxis {
-                    AxisMarks(values: .automatic(desiredCount: 5)) { value in
-                        AxisGridLine()
-                            .foregroundStyle(AppTheme.textColor.opacity(0.3))
-                        AxisValueLabel()
-                            .foregroundStyle(AppTheme.textColor)
-                    }
-                }
-                .chartYAxis {
-                    AxisMarks { value in
-                        AxisGridLine()
-                            .foregroundStyle(AppTheme.textColor.opacity(0.3))
-                        AxisValueLabel()
-                            .foregroundStyle(AppTheme.textColor)
-                    }
-                }
+                StockPriceChart(data: viewModel.historicalData)
             }
             .padding()
         }
