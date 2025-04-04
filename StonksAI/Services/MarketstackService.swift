@@ -13,47 +13,45 @@ class MarketstackService {
         return URLSession(configuration: configuration)
     }()
     
-    func fetchEndOfDayData(for symbols: [String]) async throws -> [StockQuote] {
-        let symbolsString = symbols.joined(separator: ",")
-        let urlString = "\(baseURL)/eod?access_key=\(apiKey)&symbols=\(symbolsString)&limit=20"
-        
-        guard let encodedString = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: encodedString) else {
-            logger.error("Invalid URL: \(urlString)")
-            throw MarketstackError.invalidURL
+    // MARK: - Helper Functions
+    private func makeEndpoint(_ path: String, queryItems: [URLQueryItem]) -> URL {
+        URL(string:baseURL)!
+            .appending(path: path)
+            .appending(queryItems: [
+                URLQueryItem(name: "access_key", value: apiKey)
+            ] + queryItems)
+    }
+    
+    private func validateResponse(_ response: URLResponse) throws {
+        guard let httpResponse = response as? HTTPURLResponse,
+              httpResponse.statusCode == 200 else {
+            let statusCode = (response as? HTTPURLResponse)?.statusCode ?? -1
+            logger.error("API error: HTTP \(statusCode)")
+            throw MarketstackError.apiError("HTTP \(statusCode)")
         }
+        logger.info("Successfully received data from API")
+    }
+    
+    // MARK: - API Methods
+    func fetchEndOfDayData(for symbols: [String]) async throws -> [StockQuote] {
+        let url = makeEndpoint("eod", queryItems: [
+            URLQueryItem(name: "symbols", value: symbols.joined(separator: ","))
+        ])
         
-        logger.info("Starting EOD API request for symbols: \(symbols)")
+        logger.debug("Fetching EOD data for symbols: \(symbols)")
         logger.debug("URL: \(url)")
         
         do {
             let (data, response) = try await urlSession.data(from: url)
+            try validateResponse(response)
             
-            guard let httpResponse = response as? HTTPURLResponse else {
-                logger.error("Invalid response type")
-                throw MarketstackError.apiError("Invalid response")
-            }
+            let marketstackResponse = try JSONDecoder().decode(MarketstackResponse.self, from: data)
+            logger.info("Successfully decoded \(marketstackResponse.data.count) stock quotes")
+            return marketstackResponse.data
             
-            logger.info("Received response with status code: \(httpResponse.statusCode)")
-            
-            if let responseString = String(data: data, encoding: .utf8) {
-                logger.debug("Response body: \(responseString)")
-            }
-            
-            guard (200...299).contains(httpResponse.statusCode) else {
-                logger.error("API error with status code: \(httpResponse.statusCode)")
-                throw MarketstackError.apiError("API error with status code: \(httpResponse.statusCode)")
-            }
-            
-            let decoder = JSONDecoder()
-            do {
-                let response = try decoder.decode(MarketstackResponse.self, from: data)
-                logger.info("Successfully decoded \(response.data.count) stock quotes")
-                return response.data
-            } catch {
-                logger.error("Decoding error: \(error.localizedDescription)")
-                throw MarketstackError.decodingError
-            }
+        } catch let error as DecodingError {
+            logger.error("Decoding error: \(error)")
+            throw MarketstackError.decodingError
         } catch {
             logger.error("Network error: \(error.localizedDescription)")
             throw MarketstackError.networkError(error)
@@ -67,94 +65,29 @@ class MarketstackService {
         let toDate = Date()
         let fromDate = Calendar.current.date(byAdding: .month, value: -months, to: toDate)!
         
-        let urlString = "\(baseURL)/eod?access_key=\(apiKey)&symbols=\(symbol)&date_from=\(dateFormatter.string(from: fromDate))&date_to=\(dateFormatter.string(from: toDate))&sort=desc"
+        let url = makeEndpoint("eod", queryItems: [
+            URLQueryItem(name: "symbols", value: symbol),
+            URLQueryItem(name: "date_from", value: dateFormatter.string(from: fromDate)),
+            URLQueryItem(name: "date_to", value: dateFormatter.string(from: toDate)),
+            URLQueryItem(name: "sort", value: "desc")
+        ])
         
-        guard let encodedString = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: encodedString) else {
-            logger.error("Invalid URL for historical data: \(urlString)")
-            throw MarketstackError.invalidURL
-        }
-        
-        logger.info("Starting historical data request for symbol: \(symbol)")
+        logger.debug("Fetching historical data for symbol: \(symbol)")
         logger.debug("URL: \(url)")
         
         do {
             let (data, response) = try await urlSession.data(from: url)
+            try validateResponse(response)
             
-            guard let httpResponse = response as? HTTPURLResponse else {
-                logger.error("Invalid response type")
-                throw MarketstackError.apiError("Invalid response")
-            }
+            let marketstackResponse = try JSONDecoder().decode(MarketstackResponse.self, from: data)
+            logger.info("Successfully decoded \(marketstackResponse.data.count) historical quotes")
+            return marketstackResponse.data
             
-            logger.info("Received response with status code: \(httpResponse.statusCode)")
-            
-            if let responseString = String(data: data, encoding: .utf8) {
-                logger.debug("Response body: \(responseString)")
-            }
-            
-            guard (200...299).contains(httpResponse.statusCode) else {
-                logger.error("API error with status code: \(httpResponse.statusCode)")
-                throw MarketstackError.apiError("API error with status code: \(httpResponse.statusCode)")
-            }
-            
-            let decoder = JSONDecoder()
-            do {
-                let response = try decoder.decode(MarketstackResponse.self, from: data)
-                logger.info("Successfully decoded \(response.data.count) historical quotes")
-                return response.data
-            } catch {
-                logger.error("Decoding error: \(error.localizedDescription)")
-                throw MarketstackError.decodingError
-            }
+        } catch let error as DecodingError {
+            logger.error("Decoding error: \(error)")
+            throw MarketstackError.decodingError
         } catch {
-            logger.error("Network error: \(error.localizedDescription)")
-            throw MarketstackError.networkError(error)
-        }
-    }
-    
-    func fetchIntradayData(for symbols: [String]) async throws -> [StockQuote] {
-        let symbolsString = symbols.joined(separator: ",")
-        let urlString = "\(baseURL)/intraday?access_key=\(apiKey)&symbols=\(symbolsString)&limit=20"
-        
-        guard let encodedString = urlString.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
-              let url = URL(string: encodedString) else {
-            logger.error("Invalid URL: \(urlString)")
-            throw MarketstackError.invalidURL
-        }
-        
-        logger.info("Starting intraday API request for symbols: \(symbols)")
-        logger.debug("URL: \(url)")
-        
-        do {
-            let (data, response) = try await urlSession.data(from: url)
-            
-            guard let httpResponse = response as? HTTPURLResponse else {
-                logger.error("Invalid response type")
-                throw MarketstackError.apiError("Invalid response")
-            }
-            
-            logger.info("Received response with status code: \(httpResponse.statusCode)")
-            
-            if let responseString = String(data: data, encoding: .utf8) {
-                logger.debug("Response body: \(responseString)")
-            }
-            
-            guard (200...299).contains(httpResponse.statusCode) else {
-                logger.error("API error with status code: \(httpResponse.statusCode)")
-                throw MarketstackError.apiError("API error with status code: \(httpResponse.statusCode)")
-            }
-            
-            let decoder = JSONDecoder()
-            do {
-                let response = try decoder.decode(MarketstackResponse.self, from: data)
-                logger.info("Successfully decoded \(response.data.count) intraday quotes")
-                return response.data
-            } catch {
-                logger.error("Decoding error: \(error.localizedDescription)")
-                throw MarketstackError.decodingError
-            }
-        } catch {
-            logger.error("Network error: \(error.localizedDescription)")
+            logger.error("Network error: \(error)")
             throw MarketstackError.networkError(error)
         }
     }
