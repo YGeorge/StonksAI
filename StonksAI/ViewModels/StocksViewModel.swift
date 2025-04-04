@@ -8,8 +8,9 @@ class StocksViewModel: ObservableObject {
     
     private let service = MarketstackService()
     private let logger = LoggerService.shared
-//    private let defaultSymbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "NVDA", "INTC"]
-    private let defaultSymbols = ["AAPL", "MSFT"]
+    private let defaultSymbols = ["AAPL", "MSFT", "GOOGL", "AMZN", "META", "TSLA", "NVDA",
+                                  "BRK.B", "LLY", "V", "UNH", "JPM", "JNJ", "WMT", "MA", "PG"]
+    
 
     func fetchStocks() async {
         isLoading = true

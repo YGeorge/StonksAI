@@ -6,6 +6,9 @@ class MarketstackService {
     private let timeout: TimeInterval = 30
     private let logger = LoggerService.shared
     
+    // Flag to switch between mock and real data
+    private let useMockData = true
+    
     private lazy var urlSession: URLSession = {
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = timeout
@@ -34,6 +37,25 @@ class MarketstackService {
     
     // MARK: - API Methods
     func fetchEndOfDayData(for symbols: [String]) async throws -> [StockQuote] {
+        if useMockData {
+            logger.info("Using mock data for symbols: \(symbols)")
+            
+            do {
+                guard let mockData = MockData.stockData.data(using: .utf8) else {
+                    throw MarketstackError.decodingError
+                }
+                
+                let marketstackResponse = try JSONDecoder().decode(MarketstackResponse.self, from: mockData)
+                let filteredData = marketstackResponse.data.filter { symbols.contains($0.symbol) }
+                logger.info("Successfully decoded \(filteredData.count) mock stock quotes")
+                return filteredData
+            } catch {
+                logger.error("Mock data decoding error: \(error)")
+                throw MarketstackError.decodingError
+            }
+        }
+        
+        // Real API call
         let url = makeEndpoint("eod", queryItems: [
             URLQueryItem(name: "symbols", value: symbols.joined(separator: ","))
         ])
@@ -59,6 +81,26 @@ class MarketstackService {
     }
     
     func fetchHistoricalData(for symbol: String, months: Int = 3) async throws -> [StockQuote] {
+        if useMockData {
+            logger.info("Using mock historical data for symbol: \(symbol)")
+            
+            do {
+                guard let mockData = MockData.historicalData.data(using: .utf8) else {
+                    throw MarketstackError.decodingError
+                }
+                
+                let marketstackResponse = try JSONDecoder().decode(MarketstackResponse.self, from: mockData)
+                let filteredData = marketstackResponse.data.filter { $0.symbol == symbol }
+                logger.info("Successfully decoded \(filteredData.count) historical quotes for \(symbol)")
+                return filteredData
+                
+            } catch {
+                logger.error("Mock historical data decoding error: \(error)")
+                throw MarketstackError.decodingError
+            }
+        }
+        
+        // Real API call implementation
         let dateFormatter = DateFormatter()
         dateFormatter.dateFormat = "yyyy-MM-dd"
         

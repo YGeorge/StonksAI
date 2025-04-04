@@ -22,9 +22,7 @@ struct StonksAIApp: App {
     
     var body: some Scene {
         WindowGroup {
-            NavigationView {
-                StockDetailView(symbol: "AAPL")
-            }
+            ContentView()
         }
     }
 }
