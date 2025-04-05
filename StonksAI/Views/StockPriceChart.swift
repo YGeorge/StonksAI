@@ -55,7 +55,33 @@ struct StockPriceChart: View {
             }
         }
         
+        // Sort by date (oldest first) for proper display
+        result.sort { 
+            dateFormatter.dateFromISOString($0.date) < dateFormatter.dateFromISOString($1.date)
+        }
+        
         return result
+    }
+    
+    // Calculate Y-axis range
+    private func getYAxisRange() -> (min: Double, max: Double) {
+        let filteredData = getFilteredData()
+        
+        // If no data, return default range
+        guard !filteredData.isEmpty else {
+            return (min: 0, max: 100)
+        }
+        
+        // Find minimum and maximum prices
+        let minPrice = filteredData.map { $0.low }.min() ?? 0
+        let maxPrice = filteredData.map { $0.high }.max() ?? 0
+        
+        // Calculate range with 30% padding below minimum and 20% above maximum
+        let range = maxPrice - minPrice
+        let minWithPadding = minPrice - (range * 0.3)
+        let maxWithPadding = maxPrice + (range * 0.2)
+        
+        return (min: minWithPadding, max: maxWithPadding)
     }
     
     // Get dates for X-axis
@@ -110,16 +136,29 @@ struct StockPriceChart: View {
     var body: some View {
         let filteredData = getFilteredData()
         let xAxisDates = getXAxisDates()
+        let yAxisRange = getYAxisRange()
+        
+        // Calculate dynamic width based on number of data points
+        let lineWidth: CGFloat = {
+            switch filteredData.count {
+            case 0...7: return 8    // Wider lines for weekly view
+            case 8...30: return 4   // Medium width for monthly view
+            default: return 2       // Thinner lines for 6-month view
+            }
+        }()
         
         return VStack(spacing: 16) {
             Chart(filteredData) { quote in
-                LineMark(
+                RectangleMark(
                     x: .value("Date", dateFormatter.dateFromISOString(quote.date)),
-                    y: .value("Price", quote.close)
+                    yStart: .value("Low", quote.low),
+                    yEnd: .value("High", quote.high),
+                    width: .fixed(lineWidth)
                 )
-                .foregroundStyle(AppTheme.textColor)
+                .foregroundStyle(quote.close < quote.open ? AppTheme.negativeColor : AppTheme.positiveColor)
             }
             .frame(height: 300)
+            .chartYScale(domain: yAxisRange.min...yAxisRange.max)
             .chartXAxis {
                 AxisMarks(values: xAxisDates) { value in
                     AxisGridLine()
