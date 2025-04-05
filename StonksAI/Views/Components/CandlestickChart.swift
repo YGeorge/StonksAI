@@ -24,6 +24,11 @@ struct CandlestickChart: View {
         // Calculate volume range for the volume chart
         let volumeRange = calculateVolumeRange(from: filteredData)
         
+        // Determine the number of labels based on time scale
+        let xAxisLabelCount = getLabelCount(for: selectedTimeScale)
+        let yAxisLabelCount = getLabelCount(for: selectedTimeScale)
+        let volumeYAxisLabelCount = 3  // Fixed number of labels for volume chart across all time scales
+        
         return VStack(spacing: 16) {
             // Price Chart
             Chart(filteredData) { quote in
@@ -57,7 +62,7 @@ struct CandlestickChart: View {
             .frame(height: 250)
             .chartYScale(domain: yAxisRange.min...yAxisRange.max)
             .chartXAxis {
-                AxisMarks(preset: .aligned, values: .automatic(desiredCount: 5)) { value in
+                AxisMarks(preset: .aligned, values: .automatic(desiredCount: xAxisLabelCount)) { value in
                     AxisGridLine()
                         .foregroundStyle(AppTheme.textColor.opacity(0.3))
                     AxisValueLabel {
@@ -70,7 +75,7 @@ struct CandlestickChart: View {
                 }
             }
             .chartYAxis {
-                AxisMarks(preset: .aligned, values: .automatic(desiredCount: 5)) { value in
+                AxisMarks(preset: .aligned, values: .automatic(desiredCount: yAxisLabelCount)) { value in
                     AxisGridLine()
                         .foregroundStyle(AppTheme.textColor.opacity(0.3))
                     AxisValueLabel {
@@ -84,47 +89,13 @@ struct CandlestickChart: View {
             }
             
             // Volume Chart
-            if !filteredData.isEmpty && filteredData.contains(where: { $0.volume != nil }) {
-                Chart(filteredData) { quote in
-                    if let volume = quote.volume {
-                        RectangleMark(
-                            x: .value("Date", DateFormatterService.shared.dateFromISOString(quote.date)),
-                            yStart: .value("Volume", 0),
-                            yEnd: .value("Volume", volume),
-                            width: .fixed(styleProvider.getCandlestickWidth(for: filteredData.count))
-                        )
-                        .foregroundStyle(styleProvider.getVolumeColor(for: quote))
-                    }
-                }
-                .frame(height: 50)
-                .chartYScale(domain: 0...volumeRange.max)
-                .chartXAxis {
-                    AxisMarks(preset: .aligned, values: .automatic(desiredCount: 5)) { value in
-                        AxisGridLine()
-                            .foregroundStyle(AppTheme.textColor.opacity(0.3))
-                        AxisValueLabel {
-                            if let date = value.as(Date.self) {
-                                Text(DateFormatterService.shared.shortMonthDayString(from: date))
-                                    .font(.caption)
-                            }
-                        }
-                        .foregroundStyle(AppTheme.textColor)
-                    }
-                }
-                .chartYAxis {
-                    AxisMarks(preset: .aligned, values: .automatic(desiredCount: 3)) { value in
-                        AxisGridLine()
-                            .foregroundStyle(AppTheme.textColor.opacity(0.3))
-                        AxisValueLabel {
-                            if let doubleValue = value.as(Double.self) {
-                                Text(formatVolume(Int(doubleValue)))
-                                    .font(.caption)
-                            }
-                        }
-                        .foregroundStyle(AppTheme.textColor)
-                    }
-                }
-            }
+            let volumeProvider = StockVolumeChartProvider(styleProvider: styleProvider)
+            let volumeViewModel = VolumeChartViewModel(
+                dataProvider: dataProvider,
+                volumeProvider: volumeProvider,
+                timeScale: selectedTimeScale
+            )
+            VolumeChart(viewModel: volumeViewModel)
             
             HStack(spacing: 12) {
                 TimeScaleButton(scale: .week, isSelected: selectedTimeScale == .week) {
@@ -146,7 +117,9 @@ struct CandlestickChart: View {
         guard !volumes.isEmpty else { return (min: 0, max: 100) }
         
         let maxVolume = Double(volumes.max() ?? 0)
-        return (min: 0, max: maxVolume * 1.1) // Add 10% padding
+        // Use consistent 20% padding for all time scales
+        let padding = 1.2 // 20% padding
+        return (min: 0, max: maxVolume * padding)
     }
     
     // Helper function to format volume values
@@ -159,6 +132,18 @@ struct CandlestickChart: View {
             return String(format: "%.1fK", Double(volume) / 1_000)
         } else {
             return String(format: "%.0f", Double(volume))
+        }
+    }
+    
+    // Helper function to determine the number of labels based on time scale
+    private func getLabelCount(for timeScale: TimeScale) -> Int {
+        switch timeScale {
+        case .week:
+            return 3  // Fewer labels for weekly view
+        case .month:
+            return 5  // Medium number of labels for monthly view
+        case .sixMonths:
+            return 5  // Same as monthly view for 6-month view
         }
     }
 } 
