@@ -5,6 +5,9 @@ A modern iOS stock market tracking application built with SwiftUI that provides 
 > 🎵 This is an experimental Vibe-Coding project, crafted with [Cursor AI](https://cursor.sh/). This project is being developed as a learning exercise to explore mobile application development using AI tools. The focus is on gaining practical experience with AI-assisted workflows and building modern mobile solutions.
 > The description below is also AI-generated 🦾🦾🦾.
 
+## App Screenshot
+
+![StonksAI App Screenshot](screenshot.png)
 
 ## Features
 
