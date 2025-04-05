@@ -18,46 +18,20 @@ struct CandlestickChart: View {
     
     var body: some View {
         let filteredData = dataProvider.getFilteredData(for: selectedTimeScale)
-        let xAxisDates = dataProvider.getXAxisDates(for: filteredData)
         let yAxisRange = dataProvider.getYAxisRange(for: filteredData)
-        
-        // Calculate volume range for the volume chart
-        let volumeRange = calculateVolumeRange(from: filteredData)
         
         // Determine the number of labels based on time scale
         let xAxisLabelCount = getLabelCount(for: selectedTimeScale)
         let yAxisLabelCount = getLabelCount(for: selectedTimeScale)
-        let volumeYAxisLabelCount = 3  // Fixed number of labels for volume chart across all time scales
         
         return VStack(spacing: 16) {
             // Price Chart
             Chart(filteredData) { quote in
-                // Candlestick body
-                RectangleMark(
-                    x: .value("Date", DateFormatterService.shared.dateFromISOString(quote.date)),
-                    yStart: .value("Open", quote.open),
-                    yEnd: .value("Close", quote.close),
-                    width: .fixed(styleProvider.getCandlestickWidth(for: filteredData.count))
+                CandlestickMarkContent(
+                    quote: quote,
+                    width: styleProvider.getCandlestickWidth(for: filteredData.count),
+                    color: styleProvider.getCandlestickColor(for: quote)
                 )
-                .foregroundStyle(styleProvider.getCandlestickColor(for: quote))
-                
-                // Upper wick
-                RuleMark(
-                    x: .value("Date", DateFormatterService.shared.dateFromISOString(quote.date)),
-                    yStart: .value("High", quote.high),
-                    yEnd: .value("Body Top", max(quote.open, quote.close))
-                )
-                .foregroundStyle(styleProvider.getCandlestickColor(for: quote))
-                .lineStyle(StrokeStyle(lineWidth: 1))
-                
-                // Lower wick
-                RuleMark(
-                    x: .value("Date", DateFormatterService.shared.dateFromISOString(quote.date)),
-                    yStart: .value("Body Bottom", min(quote.open, quote.close)),
-                    yEnd: .value("Low", quote.low)
-                )
-                .foregroundStyle(styleProvider.getCandlestickColor(for: quote))
-                .lineStyle(StrokeStyle(lineWidth: 1))
             }
             .frame(height: 250)
             .chartYScale(domain: yAxisRange.min...yAxisRange.max)
@@ -108,30 +82,6 @@ struct CandlestickChart: View {
                     selectedTimeScale = .sixMonths
                 }
             }
-        }
-    }
-    
-    // Helper function to calculate volume range
-    private func calculateVolumeRange(from data: [StockQuote]) -> (min: Double, max: Double) {
-        let volumes = data.compactMap { $0.volume }
-        guard !volumes.isEmpty else { return (min: 0, max: 100) }
-        
-        let maxVolume = Double(volumes.max() ?? 0)
-        // Use consistent 20% padding for all time scales
-        let padding = 1.2 // 20% padding
-        return (min: 0, max: maxVolume * padding)
-    }
-    
-    // Helper function to format volume values
-    private func formatVolume(_ volume: Int) -> String {
-        if volume >= 1_000_000_000 {
-            return String(format: "%.1fB", Double(volume) / 1_000_000_000)
-        } else if volume >= 1_000_000 {
-            return String(format: "%.1fM", Double(volume) / 1_000_000)
-        } else if volume >= 1_000 {
-            return String(format: "%.1fK", Double(volume) / 1_000)
-        } else {
-            return String(format: "%.0f", Double(volume))
         }
     }
     
