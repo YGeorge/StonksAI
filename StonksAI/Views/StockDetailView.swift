@@ -4,7 +4,10 @@ import Charts
 struct StockDetailView: View {
     let symbol: String
     @StateObject private var viewModel = StockDetailViewModel()
-    @State private var useCandlestickChart = true
+    @State private var showMA = false
+    @State private var maPeriod = 10
+    
+    private let maPeriods = [5, 10, 20, 50]
     
     var body: some View {
         ScrollView {
@@ -13,24 +16,48 @@ struct StockDetailView: View {
                     QuoteInfoView(quote: latestQuote)
                 }
                 
-                // Chart type toggle
-                HStack {
-                    Text("Chart Type:")
-                        .foregroundColor(AppTheme.textColor)
-                    Spacer()
-                    Picker("Chart Type", selection: $useCandlestickChart) {
-                        Text("Line").tag(false)
-                        Text("Candlestick").tag(true)
+                // MA toggle button and period selector
+                VStack(spacing: 8) {
+                    HStack {
+                        Text("Indicators:")
+                            .foregroundColor(AppTheme.textColor)
+                        Spacer()
+                        Button(action: {
+                            showMA.toggle()
+                        }) {
+                            Text("MA")
+                                .font(.caption)
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 8)
+                                .background(showMA ? AppTheme.positiveColor : AppTheme.backgroundColor)
+                                .foregroundColor(showMA ? .white : AppTheme.textColor)
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(AppTheme.textColor.opacity(0.3), lineWidth: 1)
+                                )
+                        }
                     }
-                    .pickerStyle(SegmentedPickerStyle())
-                    .frame(width: 200)
+                    
+                    if showMA {
+                        HStack {
+                            Text("MA Period:")
+                                .font(.caption)
+                                .foregroundColor(AppTheme.textColor)
+                            Spacer()
+                            Picker("MA Period", selection: $maPeriod) {
+                                ForEach(maPeriods, id: \.self) { period in
+                                    Text("\(period)").tag(period)
+                                }
+                            }
+                            .pickerStyle(SegmentedPickerStyle())
+                            .frame(width: 200)
+                        }
+                    }
                 }
                 .padding(.vertical, 8)
                 
-                // Display the selected chart type
-                if useCandlestickChart {
-                    CandlestickChart(data: viewModel.historicalData)
-                }
+                CandlestickChart(data: viewModel.historicalData, showMA: showMA, maPeriod: maPeriod)
             }
             .padding()
         }
@@ -51,10 +78,6 @@ struct QuoteInfoView: View {
     
     private var priceChangePercentage: Double {
         (priceChange / quote.open) * 100
-    }
-    
-    private var volatility: Double {
-        ((quote.high - quote.low) / quote.open) * 100
     }
     
     var body: some View {
@@ -93,14 +116,6 @@ struct QuoteInfoView: View {
                         .foregroundColor(AppTheme.textColor)
                     Spacer()
                     Text(String(format: "%.2f", quote.low))
-                        .foregroundColor(AppTheme.textColor)
-                }
-                
-                HStack {
-                    Text("Volatility:")
-                        .foregroundColor(AppTheme.textColor)
-                    Spacer()
-                    Text("\(String(format: "%.1f", volatility))%")
                         .foregroundColor(AppTheme.textColor)
                 }
                 

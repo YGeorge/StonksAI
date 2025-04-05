@@ -6,19 +6,28 @@ struct CandlestickChart: View {
     private let data: [StockQuote]
     private let dataProvider: ChartDataProvider
     private let styleProvider: ChartStyleProvider
+    private let showMA: Bool
+    private let maPeriod: Int
     @State private var selectedTimeScale: TimeScale = .month
     
     init(data: [StockQuote], 
          dataProvider: ChartDataProvider? = nil,
-         styleProvider: ChartStyleProvider = StockChartStyleProvider()) {
+         styleProvider: ChartStyleProvider = StockChartStyleProvider(),
+         showMA: Bool = false,
+         maPeriod: Int = 20) {
         self.data = data
         self.dataProvider = dataProvider ?? StockChartDataProvider(data: data)
         self.styleProvider = styleProvider
+        self.showMA = showMA
+        self.maPeriod = maPeriod
     }
     
     var body: some View {
         let filteredData = dataProvider.getFilteredData(for: selectedTimeScale)
         let yAxisRange = dataProvider.getYAxisRange(for: filteredData)
+        
+        // Calculate MA data if enabled
+        let maData = showMA ? MovingAverageService.shared.calculateSMA(data: filteredData, period: maPeriod) : []
         
         // Determine the number of labels based on time scale
         let xAxisLabelCount = getLabelCount(for: selectedTimeScale)
@@ -26,39 +35,72 @@ struct CandlestickChart: View {
         
         return VStack(spacing: 16) {
             // Price Chart
-            Chart(filteredData) { quote in
-                CandlestickMarkContent(
-                    quote: quote,
-                    width: styleProvider.getCandlestickWidth(for: filteredData.count),
-                    color: styleProvider.getCandlestickColor(for: quote)
-                )
-            }
-            .frame(height: 250)
-            .chartYScale(domain: yAxisRange.min...yAxisRange.max)
-            .chartXAxis {
-                AxisMarks(preset: .aligned, values: .automatic(desiredCount: xAxisLabelCount)) { value in
-                    AxisGridLine()
-                        .foregroundStyle(AppTheme.textColor.opacity(0.3))
-                    AxisValueLabel {
-                        if let date = value.as(Date.self) {
-                            Text(DateFormatterService.shared.shortMonthDayString(from: date))
+            VStack(alignment: .leading, spacing: 4) {
+                // Legend
+                if showMA {
+                    HStack(spacing: 16) {
+                        HStack(spacing: 4) {
+                            Rectangle()
+                                .fill(.blue)
+                                .frame(width: 12, height: 2)
+                            Text("MA(\(maPeriod))")
                                 .font(.caption)
+                                .foregroundColor(AppTheme.textColor)
                         }
                     }
-                    .foregroundStyle(AppTheme.textColor)
+                    .padding(.leading, 8)
                 }
-            }
-            .chartYAxis {
-                AxisMarks(preset: .aligned, values: .automatic(desiredCount: yAxisLabelCount)) { value in
-                    AxisGridLine()
-                        .foregroundStyle(AppTheme.textColor.opacity(0.3))
-                    AxisValueLabel {
-                        if let doubleValue = value.as(Double.self) {
-                            Text(String(format: "%.2f", doubleValue))
-                                .font(.caption)
+                
+                Chart {
+                    // Candlestick marks
+                    ForEach(filteredData) { quote in
+                        CandlestickMarkContent(
+                            quote: quote,
+                            width: styleProvider.getCandlestickWidth(for: filteredData.count),
+                            color: styleProvider.getCandlestickColor(for: quote)
+                        )
+                    }
+                    
+                    // Moving Average line if enabled
+                    if showMA && !maData.isEmpty {
+                        ForEach(maData.indices, id: \.self) { index in
+                            let maPoint = maData[index]
+                            LineMark(
+                                x: .value("Date", maPoint.date),
+                                y: .value("MA", maPoint.value)
+                            )
+                            .foregroundStyle(.blue)
+                            .lineStyle(StrokeStyle(lineWidth: 2))
                         }
                     }
-                    .foregroundStyle(AppTheme.textColor)
+                }
+                .frame(height: 250)
+                .chartYScale(domain: yAxisRange.min...yAxisRange.max)
+                .chartXAxis {
+                    AxisMarks(preset: .aligned, values: .automatic(desiredCount: xAxisLabelCount)) { value in
+                        AxisGridLine()
+                            .foregroundStyle(AppTheme.textColor.opacity(0.3))
+                        AxisValueLabel {
+                            if let date = value.as(Date.self) {
+                                Text(DateFormatterService.shared.shortMonthDayString(from: date))
+                                    .font(.caption)
+                            }
+                        }
+                        .foregroundStyle(AppTheme.textColor)
+                    }
+                }
+                .chartYAxis {
+                    AxisMarks(preset: .aligned, values: .automatic(desiredCount: yAxisLabelCount)) { value in
+                        AxisGridLine()
+                            .foregroundStyle(AppTheme.textColor.opacity(0.3))
+                        AxisValueLabel {
+                            if let doubleValue = value.as(Double.self) {
+                                Text(String(format: "%.2f", doubleValue))
+                                    .font(.caption)
+                            }
+                        }
+                        .foregroundStyle(AppTheme.textColor)
+                    }
                 }
             }
             
