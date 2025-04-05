@@ -7,7 +7,7 @@ A modern iOS stock market tracking application built with SwiftUI that provides 
 
 ## App Screenshot
 
-![StonksAI App Screenshot](screenshot.png)
+<img src="screenshot.png" alt="StonksAI App Screenshot" width="400">
 
 ## Features
 
