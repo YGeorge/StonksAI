@@ -6,8 +6,11 @@ struct StockDetailView: View {
     @StateObject private var viewModel = StockDetailViewModel()
     @State private var showMA = false
     @State private var maPeriod = 10
+    @State private var showRSI = false
+    @State private var rsiPeriod = 14
     
     private let maPeriods = [5, 10, 20, 50]
+    private let rsiPeriods = [7, 14, 21]
     
     var body: some View {
         ScrollView {
@@ -16,48 +19,82 @@ struct StockDetailView: View {
                     QuoteInfoView(quote: latestQuote)
                 }
                 
-                // MA toggle button and period selector
-                VStack(spacing: 8) {
+                // Indicators Section
+                VStack(alignment: .leading, spacing: 8) {
                     HStack {
-                        Text("Indicators:")
+                        Text("Indicators")
+                            .font(.headline)
                             .foregroundColor(AppTheme.textColor)
+                        
                         Spacer()
+                        
+                        // MA Button
                         Button(action: {
                             showMA.toggle()
                         }) {
                             Text("MA")
-                                .font(.caption)
+                                .font(.system(size: 14, weight: .medium))
                                 .padding(.horizontal, 12)
-                                .padding(.vertical, 8)
+                                .padding(.vertical, 6)
                                 .background(showMA ? AppTheme.positiveColor : AppTheme.backgroundColor)
                                 .foregroundColor(showMA ? .white : AppTheme.textColor)
                                 .cornerRadius(8)
                                 .overlay(
                                     RoundedRectangle(cornerRadius: 8)
-                                        .stroke(AppTheme.textColor.opacity(0.3), lineWidth: 1)
+                                        .stroke(showMA ? Color.clear : .white.opacity(0.5), lineWidth: 1)
+                                )
+                        }
+                        
+                        // RSI Button
+                        Button(action: {
+                            showRSI.toggle()
+                        }) {
+                            Text("RSI")
+                                .font(.system(size: 14, weight: .medium))
+                                .padding(.horizontal, 12)
+                                .padding(.vertical, 6)
+                                .background(showRSI ? AppTheme.positiveColor : AppTheme.backgroundColor)
+                                .foregroundColor(showRSI ? .white : AppTheme.textColor)
+                                .cornerRadius(8)
+                                .overlay(
+                                    RoundedRectangle(cornerRadius: 8)
+                                        .stroke(showRSI ? Color.clear : .white.opacity(0.5), lineWidth: 1)
                                 )
                         }
                     }
                     
+                    // MA Period Selector
                     if showMA {
-                        HStack {
-                            Text("MA Period:")
-                                .font(.caption)
-                                .foregroundColor(AppTheme.textColor)
-                            Spacer()
-                            Picker("MA Period", selection: $maPeriod) {
-                                ForEach(maPeriods, id: \.self) { period in
-                                    Text("\(period)").tag(period)
-                                }
+                        Picker("MA Period", selection: $maPeriod) {
+                            ForEach(maPeriods, id: \.self) { period in
+                                Text("\(period)").tag(period)
                             }
-                            .pickerStyle(SegmentedPickerStyle())
-                            .frame(width: 200)
                         }
+                        .pickerStyle(SegmentedPickerStyle())
+                        .padding(.top, 4)
+                    }
+                    
+                    // RSI Period Selector
+                    if showRSI {
+                        Picker("RSI Period", selection: $rsiPeriod) {
+                            ForEach(rsiPeriods, id: \.self) { period in
+                                Text("\(period)").tag(period)
+                            }
+                        }
+                        .pickerStyle(SegmentedPickerStyle())
+                        .padding(.top, 4)
                     }
                 }
-                .padding(.vertical, 8)
+                .padding(.vertical)
+                .cornerRadius(12)
                 
-                CandlestickChart(data: viewModel.historicalData, showMA: showMA, maPeriod: maPeriod)
+                CandlestickChart(
+                    data: viewModel.historicalData,
+                    showMA: showMA,
+                    maPeriod: maPeriod,
+                    showRSI: showRSI,
+                    rsiPeriod: rsiPeriod
+                )
             }
             .padding()
         }

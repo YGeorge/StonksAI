@@ -8,18 +8,24 @@ struct CandlestickChart: View {
     private let styleProvider: ChartStyleProvider
     private let showMA: Bool
     private let maPeriod: Int
+    private let showRSI: Bool
+    private let rsiPeriod: Int
     @State private var selectedTimeScale: TimeScale = .month
     
     init(data: [StockQuote], 
          dataProvider: ChartDataProvider? = nil,
          styleProvider: ChartStyleProvider = StockChartStyleProvider(),
          showMA: Bool = false,
-         maPeriod: Int = 20) {
+         maPeriod: Int = 20,
+         showRSI: Bool = false,
+         rsiPeriod: Int = 14) {
         self.data = data
         self.dataProvider = dataProvider ?? StockChartDataProvider(data: data)
         self.styleProvider = styleProvider
         self.showMA = showMA
         self.maPeriod = maPeriod
+        self.showRSI = showRSI
+        self.rsiPeriod = rsiPeriod
     }
     
     var body: some View {
@@ -29,6 +35,9 @@ struct CandlestickChart: View {
         // Calculate MA data if enabled
         let maData = showMA ? MovingAverageService.shared.calculateSMA(data: filteredData, period: maPeriod) : []
         
+        // Calculate RSI data if enabled
+        let rsiData = showRSI ? RSIService.shared.calculateRSI(data: filteredData, period: rsiPeriod) : []
+        
         // Determine the number of labels based on time scale
         let xAxisLabelCount = getLabelCount(for: selectedTimeScale)
         let yAxisLabelCount = getLabelCount(for: selectedTimeScale)
@@ -37,8 +46,8 @@ struct CandlestickChart: View {
             // Price Chart
             VStack(alignment: .leading, spacing: 4) {
                 // Legend
-                if showMA {
-                    HStack(spacing: 16) {
+                HStack(spacing: 16) {
+                    if showMA {
                         HStack(spacing: 4) {
                             Rectangle()
                                 .fill(.blue)
@@ -48,8 +57,19 @@ struct CandlestickChart: View {
                                 .foregroundColor(AppTheme.textColor)
                         }
                     }
-                    .padding(.leading, 8)
+                    
+                    if showRSI {
+                        HStack(spacing: 4) {
+                            Rectangle()
+                                .fill(.purple)
+                                .frame(width: 12, height: 2)
+                            Text("RSI(\(rsiPeriod))")
+                                .font(.caption)
+                                .foregroundColor(AppTheme.textColor)
+                        }
+                    }
                 }
+                .padding(.leading, 8)
                 
                 Chart {
                     // Candlestick marks
@@ -102,6 +122,11 @@ struct CandlestickChart: View {
                         .foregroundStyle(AppTheme.textColor)
                     }
                 }
+            }
+            
+            // RSI Chart if enabled
+            if showRSI && !rsiData.isEmpty {
+                RSIChart(data: rsiData, period: rsiPeriod, xAxisLabelCount: xAxisLabelCount)
             }
             
             // Volume Chart
