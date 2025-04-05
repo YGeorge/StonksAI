@@ -10,7 +10,7 @@ struct VolumeChart: View {
             Chart(viewModel.filteredData) { quote in
                 if let volume = quote.volume {
                     RectangleMark(
-                        x: .value("Date", DateFormatterService.shared.dateFromISOString(quote.date)),
+                        x: .value("Date", quote.dateObject),
                         yStart: .value("Volume", 0),
                         yEnd: .value("Volume", volume),
                         width: .fixed(viewModel.getBarWidth(for: viewModel.filteredData.count))

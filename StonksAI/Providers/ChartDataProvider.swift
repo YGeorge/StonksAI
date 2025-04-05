@@ -19,23 +19,16 @@ class StockChartDataProvider: ChartDataProvider {
     }
     
     func getFilteredData(for timeScale: TimeScale) -> [StockQuote] {
-        // Convert dates and sort
-        var datesAndQuotes: [(Date, StockQuote)] = []
-        for quote in data {
-            let date = dateFormatter.dateFromISOString(quote.date)
-            datesAndQuotes.append((date, quote))
-        }
-        
         // Sort by date (latest first)
-        datesAndQuotes.sort { $0.0 > $1.0 }
+        var sortedData = data.sorted { $0.dateObject > $1.dateObject }
         
         // If no data, return empty array
-        if datesAndQuotes.isEmpty {
+        if sortedData.isEmpty {
             return []
         }
         
         // Get cutoff date
-        let latestDate = datesAndQuotes[0].0
+        let latestDate = sortedData[0].dateObject
         let calendar = Calendar.current
         let cutoffDate = calendar.date(
             byAdding: .day,
@@ -44,17 +37,10 @@ class StockChartDataProvider: ChartDataProvider {
         ) ?? latestDate
         
         // Filter and return quotes only
-        var result: [StockQuote] = []
-        for (date, quote) in datesAndQuotes {
-            if date >= cutoffDate {
-                result.append(quote)
-            }
-        }
+        var result = sortedData.filter { $0.dateObject >= cutoffDate }
         
         // Sort by date (oldest first) for proper display
-        result.sort { 
-            dateFormatter.dateFromISOString($0.date) < dateFormatter.dateFromISOString($1.date)
-        }
+        result.sort { $0.dateObject < $1.dateObject }
         
         return result
     }
@@ -78,12 +64,8 @@ class StockChartDataProvider: ChartDataProvider {
     }
     
     func getXAxisDates(for data: [StockQuote]) -> [Date] {
-        // Convert to dates and sort
-        var dates: [Date] = []
-        for quote in data {
-            dates.append(dateFormatter.dateFromISOString(quote.date))
-        }
-        
+        // Extract dates and sort
+        var dates = data.map { $0.dateObject }
         dates.sort()
         
         // Return empty array if no dates

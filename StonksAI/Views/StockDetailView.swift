@@ -30,8 +30,6 @@ struct StockDetailView: View {
                 // Display the selected chart type
                 if useCandlestickChart {
                     CandlestickChart(data: viewModel.historicalData)
-                } else {
-                    StockPriceChart(data: viewModel.historicalData)
                 }
             }
             .padding()

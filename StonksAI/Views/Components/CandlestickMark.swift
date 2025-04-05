@@ -10,7 +10,7 @@ struct CandlestickMarkContent: ChartContent {
     var body: some ChartContent {
         // Candlestick body
         RectangleMark(
-            x: .value("Date", DateFormatterService.shared.dateFromISOString(quote.date)),
+            x: .value("Date", quote.dateObject),
             yStart: .value("Open", quote.open),
             yEnd: .value("Close", quote.close),
             width: .fixed(width)
@@ -19,7 +19,7 @@ struct CandlestickMarkContent: ChartContent {
         
         // Upper wick
         RuleMark(
-            x: .value("Date", DateFormatterService.shared.dateFromISOString(quote.date)),
+            x: .value("Date", quote.dateObject),
             yStart: .value("High", quote.high),
             yEnd: .value("Body Top", max(quote.open, quote.close))
         )
@@ -28,7 +28,7 @@ struct CandlestickMarkContent: ChartContent {
         
         // Lower wick
         RuleMark(
-            x: .value("Date", DateFormatterService.shared.dateFromISOString(quote.date)),
+            x: .value("Date", quote.dateObject),
             yStart: .value("Body Bottom", min(quote.open, quote.close)),
             yEnd: .value("Low", quote.low)
         )
