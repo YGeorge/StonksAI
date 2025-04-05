@@ -4,6 +4,7 @@ import Charts
 struct StockDetailView: View {
     let symbol: String
     @StateObject private var viewModel = StockDetailViewModel()
+    @State private var useCandlestickChart = true
     
     var body: some View {
         ScrollView {
@@ -12,7 +13,26 @@ struct StockDetailView: View {
                     QuoteInfoView(quote: latestQuote)
                 }
                 
-                StockPriceChart(data: viewModel.historicalData)
+                // Chart type toggle
+                HStack {
+                    Text("Chart Type:")
+                        .foregroundColor(AppTheme.textColor)
+                    Spacer()
+                    Picker("Chart Type", selection: $useCandlestickChart) {
+                        Text("Line").tag(false)
+                        Text("Candlestick").tag(true)
+                    }
+                    .pickerStyle(SegmentedPickerStyle())
+                    .frame(width: 200)
+                }
+                .padding(.vertical, 8)
+                
+                // Display the selected chart type
+                if useCandlestickChart {
+                    CandlestickChart(data: viewModel.historicalData)
+                } else {
+                    StockPriceChart(data: viewModel.historicalData)
+                }
             }
             .padding()
         }
@@ -91,11 +111,23 @@ struct QuoteInfoView: View {
                         Text("Volume:")
                             .foregroundColor(AppTheme.textColor)
                         Spacer()
-                        Text(volume.formatted())
+                        Text(formatVolume(volume))
                             .foregroundColor(AppTheme.textColor)
                     }
                 }
             }
+        }
+    }
+    
+    private func formatVolume(_ volume: Int) -> String {
+        if volume >= 1_000_000_000 {
+            return String(format: "%.1fB", Double(volume) / 1_000_000_000)
+        } else if volume >= 1_000_000 {
+            return String(format: "%.1fM", Double(volume) / 1_000_000)
+        } else if volume >= 1_000 {
+            return String(format: "%.1fK", Double(volume) / 1_000)
+        } else {
+            return String(format: "%.0f", Double(volume))
         }
     }
 }
