@@ -2,14 +2,12 @@ import SwiftUI
 import Charts
 
 enum TimeScale: String {
-    case day = "Day"
     case week = "Week"
     case month = "Month"
     case sixMonths = "6 Months"
     
     var daysToShow: Int {
         switch self {
-        case .day: return 1
         case .week: return 7
         case .month: return 30
         case .sixMonths: return 180
@@ -21,30 +19,14 @@ struct StockPriceChart: View {
     let data: [StockQuote]
     @State private var selectedTimeScale: TimeScale = .month
     
-    // Reusable date formatters
-    private let isoDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "yyyy-MM-dd'T'HH:mm:ssZ"
-        return formatter
-    }()
-    
-    private let axisDateFormatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.dateFormat = "MMM d"
-        return formatter
-    }()
-    
-    // Simple date conversion function
-    private func dateFromString(_ dateString: String) -> Date {
-        return isoDateFormatter.date(from: dateString) ?? Date()
-    }
+    private let dateFormatter = DateFormatterService.shared
     
     // Get filtered data for the selected time period
     private func getFilteredData() -> [StockQuote] {
         // Convert dates and sort
         var datesAndQuotes: [(Date, StockQuote)] = []
         for quote in data {
-            let date = dateFromString(quote.date)
+            let date = dateFormatter.dateFromISOString(quote.date)
             datesAndQuotes.append((date, quote))
         }
         
@@ -76,31 +58,34 @@ struct StockPriceChart: View {
         return result
     }
     
-    // Get three dates for X-axis
+    // Get dates for X-axis
     private func getXAxisDates() -> [Date] {
         let filteredData = getFilteredData()
         
         // Convert to dates and sort
         var dates: [Date] = []
         for quote in filteredData {
-            dates.append(dateFromString(quote.date))
+            dates.append(dateFormatter.dateFromISOString(quote.date))
         }
         
         dates.sort()
         
-        // Return appropriate dates based on how many we have
+        // Return empty array if no dates
         if dates.isEmpty {
             return []
-        } else if dates.count == 1 {
-            return [dates[0]]
-        } else if dates.count == 2 {
-            return [dates[0], dates[1]]
+        } else if dates.count < 5 {
+            // If we have less than 5 dates, return all of them
+            return dates
         } else {
-            // First, middle, and last
-            let first = dates[0]
-            let middle = dates[dates.count / 2]
-            let last = dates[dates.count - 1]
-            return [first, middle, last]
+            // Calculate 5 evenly spaced indices
+            let step = (dates.count - 1) / 4 // This will give us 5 points including start and end
+            return [
+                dates[0],                     // First date
+                dates[step],                  // 25% point
+                dates[step * 2],             // 50% point
+                dates[step * 3],             // 75% point
+                dates[dates.count - 1]        // Last date
+            ]
         }
     }
     
@@ -129,7 +114,7 @@ struct StockPriceChart: View {
         return VStack(spacing: 16) {
             Chart(filteredData) { quote in
                 LineMark(
-                    x: .value("Date", dateFromString(quote.date)),
+                    x: .value("Date", dateFormatter.dateFromISOString(quote.date)),
                     y: .value("Price", quote.close)
                 )
                 .foregroundStyle(AppTheme.textColor)
@@ -141,7 +126,7 @@ struct StockPriceChart: View {
                         .foregroundStyle(AppTheme.textColor.opacity(0.3))
                     AxisValueLabel {
                         if let date = value.as(Date.self) {
-                            Text(axisDateFormatter.string(from: date))
+                            Text(dateFormatter.shortMonthDayString(from: date))
                                 .font(.caption)
                         }
                     }
@@ -162,9 +147,7 @@ struct StockPriceChart: View {
                 }
             }
             
-            // Time scale buttons - manually laid out
             HStack(spacing: 12) {
-                timeScaleButton(for: .day)
                 timeScaleButton(for: .week)
                 timeScaleButton(for: .month)
                 timeScaleButton(for: .sixMonths)
