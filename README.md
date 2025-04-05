@@ -11,16 +11,13 @@ A modern iOS stock market tracking application built with SwiftUI that provides 
 
 ## Features
 
-- 📈 Real-time stock quotes for major companies
-- 📊 Interactive price charts with historical data
-- 💹 Detailed stock information, including:
-  - Opening/Closing prices
-  - High/Low values
-  - Volume data
-  - Price change calculations
-  - Percentage changes
-- 🎨 Modern UI with dark theme
-- 📱 Responsive design optimized for iOS devices
+- 💸 **Real-time Stock Data**: View current stock prices, changes, and trading volumes
+- 📊 **Historical Data**: Access historical stock data with interactive charts
+- 💹 **Technical Indicators**:
+  - **Moving Average (MA)**: Toggle between 5, 10, 20, and 50-day periods
+  - **Relative Strength Index (RSI)**: Toggle between 7, 14, and 21-day periods
+- 📈 **Interactive Charts**: Candlestick charts with volume data and customizable indicators
+- 📱 **Search Functionality**: Easily find stocks by symbol or company name
 
 ## Technical Details
 
