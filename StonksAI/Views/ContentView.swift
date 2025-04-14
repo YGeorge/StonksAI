@@ -2,9 +2,10 @@ import SwiftUI
 
 struct ContentView: View {
     @StateObject private var viewModel = StocksViewModel()
+    @State private var selectedSymbol: String?
     
     var body: some View {
-        NavigationView {
+        NavigationStack {
             Group {
                 if viewModel.stocks.isEmpty && !viewModel.isLoading {
                     VStack(spacing: 16) {
@@ -20,10 +21,13 @@ struct ContentView: View {
                     }
                 } else {
                     List(viewModel.stocks) { stock in
-                        NavigationLink(destination: StockDetailView(symbol: stock.symbol)) {
+                        Button(action: {
+                            selectedSymbol = stock.symbol
+                        }) {
                             StockRow(stock: stock)
                         }
                         .listRowBackground(AppTheme.backgroundColor)
+                        .listRowSeparator(.hidden)
                     }
                     .listStyle(.plain)
                 }
@@ -51,6 +55,9 @@ struct ContentView: View {
                 }
             } message: {
                 Text(viewModel.errorMessage ?? "")
+            }
+            .navigationDestination(item: $selectedSymbol) { symbol in
+                StockDetailView(symbol: symbol)
             }
         }
         .task {
