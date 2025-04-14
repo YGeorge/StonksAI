@@ -156,28 +156,14 @@ struct QuoteInfoView: View {
                         .foregroundColor(AppTheme.textColor)
                 }
                 
-                if let volume = quote.volume {
-                    HStack {
-                        Text("Volume:")
-                            .foregroundColor(AppTheme.textColor)
-                        Spacer()
-                        Text(formatVolume(volume))
-                            .foregroundColor(AppTheme.textColor)
-                    }
+                HStack {
+                    Text("Volume:")
+                        .foregroundColor(AppTheme.textColor)
+                    Spacer()
+                    Text(FormattingUtils.formatVolume(quote.volume))
+                        .foregroundColor(AppTheme.textColor)
                 }
             }
-        }
-    }
-    
-    private func formatVolume(_ volume: Int) -> String {
-        if volume >= 1_000_000_000 {
-            return String(format: "%.1fB", Double(volume) / 1_000_000_000)
-        } else if volume >= 1_000_000 {
-            return String(format: "%.1fM", Double(volume) / 1_000_000)
-        } else if volume >= 1_000 {
-            return String(format: "%.1fK", Double(volume) / 1_000)
-        } else {
-            return String(format: "%.0f", Double(volume))
         }
     }
 }
